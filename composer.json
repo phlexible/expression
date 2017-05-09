@@ -1,0 +1,28 @@
+{
+    "name": "phlexible/expression",
+    "description": "phlexible expression component",
+    "license": "MIT",
+    "type": "library",
+    "keywords": ["phlexible"],
+    "autoload": {
+        "psr-4": {
+            "Phlexible\\Component\\Expression\\": ""
+        }
+    },
+    "require": {
+        "php": "~7.1",
+        "webmozart/expression": "^1.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "~6.0",
+        "symfony/form": "^3.2",
+        "doctrine/orm": "^2.5"
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.0-dev"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
