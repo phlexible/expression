@@ -4,22 +4,17 @@
          convertErrorsToExceptions="true"
          convertNoticesToExceptions="true"
          convertWarningsToExceptions="true"
-         syntaxCheck="true"
-         verbose="true">
+         verbose="true"
+         bootstrap="vendor/autoload.php">
     <testsuites>
         <testsuite name="expression">
-            <directory>Tests</directory>
+            <directory>tests</directory>
         </testsuite>
     </testsuites>
 
     <filter>
         <whitelist>
-            <directory suffix=".php">.</directory>
-            <exclude>
-                <directory suffix=".php">Tests</directory>
-                <directory suffix=".php">vendor</directory>
-                <file>sami.php</file>
-            </exclude>
+            <directory suffix=".php">src</directory>
         </whitelist>
     </filter>
 </phpunit>
