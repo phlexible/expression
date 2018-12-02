@@ -21,12 +21,12 @@ use Webmozart\Expression\Expression;
 interface ExpressionSerializerInterface
 {
     /**
-     * @return mixed[]
+     * @return mixed
      */
-    public function serialize(Expression $expr): array;
+    public function serialize(Expression $expr);
 
     /**
-     * @param mixed[] $expression
+     * @param mixed $expression
      */
-    public function deserialize(array $expression): Expression;
+    public function deserialize($expression): Expression;
 }

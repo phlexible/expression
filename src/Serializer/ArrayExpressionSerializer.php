@@ -16,10 +16,37 @@ namespace Phlexible\Component\Expression\Serializer;
 use Phlexible\Component\Expression\Exception\UnhandledExpressionException;
 use Phlexible\Component\Expression\Exception\UnsupportedSerializedExpressionException;
 use Phlexible\Component\Expression\Selector\PropertyPath;
-use Webmozart\Expression\Constraint;
+use Webmozart\Expression\Constraint\Contains;
+use Webmozart\Expression\Constraint\EndsWith;
+use Webmozart\Expression\Constraint\Equals;
+use Webmozart\Expression\Constraint\GreaterThan;
+use Webmozart\Expression\Constraint\GreaterThanEqual;
+use Webmozart\Expression\Constraint\In;
+use Webmozart\Expression\Constraint\IsEmpty;
+use Webmozart\Expression\Constraint\IsInstanceOf;
+use Webmozart\Expression\Constraint\KeyExists;
+use Webmozart\Expression\Constraint\KeyNotExists;
+use Webmozart\Expression\Constraint\LessThan;
+use Webmozart\Expression\Constraint\LessThanEqual;
+use Webmozart\Expression\Constraint\Matches;
+use Webmozart\Expression\Constraint\NotEquals;
+use Webmozart\Expression\Constraint\NotSame;
+use Webmozart\Expression\Constraint\Same;
+use Webmozart\Expression\Constraint\StartsWith;
 use Webmozart\Expression\Expression;
-use Webmozart\Expression\Logic;
-use Webmozart\Expression\Selector;
+use Webmozart\Expression\Logic\AlwaysFalse;
+use Webmozart\Expression\Logic\AlwaysTrue;
+use Webmozart\Expression\Logic\AndX;
+use Webmozart\Expression\Logic\Not;
+use Webmozart\Expression\Logic\OrX;
+use Webmozart\Expression\Selector\All;
+use Webmozart\Expression\Selector\AtLeast;
+use Webmozart\Expression\Selector\AtMost;
+use Webmozart\Expression\Selector\Count;
+use Webmozart\Expression\Selector\Exactly;
+use Webmozart\Expression\Selector\Key;
+use Webmozart\Expression\Selector\Method;
+use Webmozart\Expression\Selector\Property;
 
 /**
  * Array expression serializer.
@@ -29,7 +56,7 @@ class ArrayExpressionSerializer implements ExpressionSerializerInterface
     /**
      * @return mixed[]
      */
-    public function serialize(Expression $expr): array
+    public function serialize(Expression $expr)
     {
         return $this->serializeExpression($expr);
     }
@@ -37,8 +64,12 @@ class ArrayExpressionSerializer implements ExpressionSerializerInterface
     /**
      * @param mixed[] $expression
      */
-    public function deserialize(array $expression): Expression
+    public function deserialize($expression): Expression
     {
+        if (!is_array($expression)) {
+            throw new \Exception("bla");
+        }
+
         return $this->deserializeExpression($expression);
     }
 
@@ -49,76 +80,76 @@ class ArrayExpressionSerializer implements ExpressionSerializerInterface
     {
         $class = get_class($expr);
 
-        if ($expr instanceof Logic\AlwaysFalse) {
+        if ($expr instanceof AlwaysFalse) {
             $data = ['logic' => 'false'];
-        } elseif ($expr instanceof Logic\AlwaysTrue) {
+        } elseif ($expr instanceof AlwaysTrue) {
             $data = ['logic' => 'true'];
-        } elseif ($expr instanceof Logic\AndX) {
+        } elseif ($expr instanceof AndX) {
             $data = ['logic' => 'and', 'conjuncts' => []];
             foreach ($expr->getConjuncts() as $conjunct) {
                 $data['conjuncts'][] = $this->serializeExpression($conjunct);
             }
-        } elseif ($expr instanceof Logic\Not) {
+        } elseif ($expr instanceof Not) {
             $data = [
                 'logic' => 'not',
                 'negatedExpression' => $this->serializeExpression($expr->getNegatedExpression()),
             ];
-        } elseif ($expr instanceof Logic\OrX) {
+        } elseif ($expr instanceof OrX) {
             $data = ['logic' => 'or', 'disjuncts' => []];
             foreach ($expr->getDisjuncts() as $disjunct) {
                 $data['disjuncts'][] = $this->serializeExpression($disjunct);
             }
-        } elseif ($expr instanceof Selector\All) {
+        } elseif ($expr instanceof All) {
             $data = ['selector' => 'all', 'expression' => $this->serializeExpression($expr->getExpression())];
-        } elseif ($expr instanceof Selector\AtLeast) {
+        } elseif ($expr instanceof AtLeast) {
             $data = ['selector' => 'atLeast', 'count' => 0, 'expression' => $this->serializeExpression($expr->getExpression())];
-        } elseif ($expr instanceof Selector\AtMost) {
+        } elseif ($expr instanceof AtMost) {
             $data = ['selector' => 'atMost', 'count' => 0, 'expression' => $this->serializeExpression($expr->getExpression())];
-        } elseif ($expr instanceof Selector\Count) {
+        } elseif ($expr instanceof Count) {
             $data = ['selector' => 'count', 'expression' => $this->serializeExpression($expr->getExpression())];
-        } elseif ($expr instanceof Selector\Exactly) {
+        } elseif ($expr instanceof Exactly) {
             $data = ['selector' => 'exactly', 'count' => 0, 'expression' => $this->serializeExpression($expr->getExpression())];
-        } elseif ($expr instanceof Selector\Key) {
+        } elseif ($expr instanceof Key) {
             $data = ['selector' => 'key', 'key' => $expr->getKey(), 'expression' => $this->serializeExpression($expr->getExpression())];
-        } elseif ($expr instanceof Selector\Method) {
+        } elseif ($expr instanceof Method) {
             $data = ['selector' => 'method', 'methodName' => $expr->getMethodName(), 'arguments' => $expr->getArguments(), 'expression' => $this->serializeExpression($expr->getExpression())];
-        } elseif ($expr instanceof Selector\Property) {
+        } elseif ($expr instanceof Property) {
             $data = ['selector' => 'property', 'propertyName' => $expr->getPropertyName(), 'expression' => $this->serializeExpression($expr->getExpression())];
         } elseif ($expr instanceof PropertyPath) {
             $data = ['selector' => 'propertyPath', 'propertyPath' => $expr->getPropertyPath(), 'expression' => $this->serializeExpression($expr->getExpression())];
-        } elseif ($expr instanceof Constraint\Contains) {
+        } elseif ($expr instanceof Contains) {
             $data = ['constraint' => 'contains', 'value' => $expr->getComparedValue()];
-        } elseif ($expr instanceof Constraint\EndsWith) {
+        } elseif ($expr instanceof EndsWith) {
             $data = ['constraint' => 'endsWith', 'value' => $expr->getAcceptedSuffix()];
-        } elseif ($expr instanceof Constraint\Equals) {
+        } elseif ($expr instanceof Equals) {
             $data = ['constraint' => 'equals', 'value' => $expr->getComparedValue()];
-        } elseif ($expr instanceof Constraint\GreaterThan) {
+        } elseif ($expr instanceof GreaterThan) {
             $data = ['constraint' => 'greaterThan', 'value' => $expr->getComparedValue()];
-        } elseif ($expr instanceof Constraint\GreaterThanEqual) {
+        } elseif ($expr instanceof GreaterThanEqual) {
             $data = ['constraint' => 'greaterThanEqual', 'value' => $expr->getComparedValue()];
-        } elseif ($expr instanceof Constraint\In) {
+        } elseif ($expr instanceof In) {
             $data = ['constraint' => 'in', 'value' => $expr->getAcceptedValues()];
-        } elseif ($expr instanceof Constraint\IsEmpty) {
+        } elseif ($expr instanceof IsEmpty) {
             $data = ['constraint' => 'isEmpty'];
-        } elseif ($expr instanceof Constraint\IsInstanceOf) {
+        } elseif ($expr instanceof IsInstanceOf) {
             $data = ['constraint' => 'instanceof', 'value' => $expr->getClassName()];
-        } elseif ($expr instanceof Constraint\KeyExists) {
+        } elseif ($expr instanceof KeyExists) {
             $data = ['constraint' => 'keyExists', 'value' => $expr->getKey()];
-        } elseif ($expr instanceof Constraint\KeyNotExists) {
+        } elseif ($expr instanceof KeyNotExists) {
             $data = ['constraint' => 'keyNotExists', 'value' => $expr->getKey()];
-        } elseif ($expr instanceof Constraint\LessThan) {
+        } elseif ($expr instanceof LessThan) {
             $data = ['constraint' => 'lessThan', 'value' => $expr->getComparedValue()];
-        } elseif ($expr instanceof Constraint\LessThanEqual) {
+        } elseif ($expr instanceof LessThanEqual) {
             $data = ['constraint' => 'lessThanEqual', 'value' => $expr->getComparedValue()];
-        } elseif ($expr instanceof Constraint\Matches) {
+        } elseif ($expr instanceof Matches) {
             $data = ['constraint' => 'matches', 'value' => $expr->getRegularExpression()];
-        } elseif ($expr instanceof Constraint\NotEquals) {
+        } elseif ($expr instanceof NotEquals) {
             $data = ['constraint' => 'notEquals', 'value' => $expr->getComparedValue()];
-        } elseif ($expr instanceof Constraint\NotSame) {
+        } elseif ($expr instanceof NotSame) {
             $data = ['constraint' => 'notSame', 'value' => $expr->getComparedValue()];
-        } elseif ($expr instanceof Constraint\Same) {
+        } elseif ($expr instanceof Same) {
             $data = ['constraint' => 'same', 'value' => $expr->getComparedValue()];
-        } elseif ($expr instanceof Constraint\StartsWith) {
+        } elseif ($expr instanceof StartsWith) {
             $data = ['constraint' => 'startsWith', 'value' => $expr->getAcceptedPrefix()];
         } else {
             throw UnhandledExpressionException::fromClass($class);
@@ -169,19 +200,19 @@ class ArrayExpressionSerializer implements ExpressionSerializerInterface
 
         switch ($logic) {
             case 'not':
-                return new Logic\Not($this->deserializeExpression($expression['negatedExpression']));
+                return new Not($this->deserializeExpression($expression['negatedExpression']));
 
             case 'or':
-                return new Logic\OrX($this->deserializeExpressions($expression['disjuncts']));
+                return new OrX($this->deserializeExpressions($expression['disjuncts']));
 
             case 'and':
-                return new Logic\AndX($this->deserializeExpressions($expression['conjuncts']));
+                return new AndX($this->deserializeExpressions($expression['conjuncts']));
 
             case 'true':
-                return new Logic\AlwaysTrue();
+                return new AlwaysTrue();
 
             case 'false':
-                return new Logic\AlwaysFalse();
+                return new AlwaysFalse();
         }
 
         throw UnsupportedSerializedExpressionException::unsupportedLogic($expression);
@@ -196,28 +227,28 @@ class ArrayExpressionSerializer implements ExpressionSerializerInterface
 
         switch ($selector) {
             case 'all':
-                return new Selector\All($this->deserializeExpression($expression['expression']));
+                return new All($this->deserializeExpression($expression['expression']));
 
             case 'atLeast':
-                return new Selector\AtLeast($expression['count'], $this->deserializeExpression($expression['expression']));
+                return new AtLeast($expression['count'], $this->deserializeExpression($expression['expression']));
 
             case 'atMost':
-                return new Selector\AtMost($expression['count'], $this->deserializeExpression($expression['expression']));
+                return new AtMost($expression['count'], $this->deserializeExpression($expression['expression']));
 
             case 'count':
-                return new Selector\Count($this->deserializeExpression($expression['expression']));
+                return new Count($this->deserializeExpression($expression['expression']));
 
             case 'exactly':
-                return new Selector\Exactly($expression['count'], $this->deserializeExpression($expression['expression']));
+                return new Exactly($expression['count'], $this->deserializeExpression($expression['expression']));
 
             case 'key':
-                return new Selector\Key($expression['key'], $this->deserializeExpression($expression['expression']));
+                return new Key($expression['key'], $this->deserializeExpression($expression['expression']));
 
             case 'method':
-                return new Selector\Method($expression['methodName'], $expression['arguments'], $this->deserializeExpression($expression['expression']));
+                return new Method($expression['methodName'], $expression['arguments'], $this->deserializeExpression($expression['expression']));
 
             case 'property':
-                return new Selector\Property($expression['propertyName'], $this->deserializeExpression($expression['expression']));
+                return new Property($expression['propertyName'], $this->deserializeExpression($expression['expression']));
 
             case 'propertyPath':
                 return new PropertyPath($expression['propertyPath'], $this->deserializeExpression($expression['expression']));
@@ -235,58 +266,58 @@ class ArrayExpressionSerializer implements ExpressionSerializerInterface
 
         switch ($constraint) {
             case 'equals':
-                return new Constraint\Equals($expression['value']);
+                return new Equals($expression['value']);
 
             case 'notEquals':
-                return new Constraint\NotEquals($expression['value']);
+                return new NotEquals($expression['value']);
 
             case 'same':
-                return new Constraint\Same($expression['value']);
+                return new Same($expression['value']);
 
             case 'notSame':
-                return new Constraint\NotSame($expression['value']);
+                return new NotSame($expression['value']);
 
             case 'startsWith':
-                return new Constraint\StartsWith($expression['value']);
+                return new StartsWith($expression['value']);
 
             case 'endsWith':
-                return new Constraint\EndsWith($expression['value']);
+                return new EndsWith($expression['value']);
 
             case 'contains':
-                return new Constraint\Contains($expression['value']);
+                return new Contains($expression['value']);
 
             case 'matches':
-                return new Constraint\Matches($expression['value']);
+                return new Matches($expression['value']);
 
             case 'in':
-                return new Constraint\In($expression['value']);
+                return new In($expression['value']);
 
             case 'keyExists':
-                return new Constraint\KeyExists($expression['value']);
+                return new KeyExists($expression['value']);
 
             case 'keyNotExists':
-                return new Constraint\KeyNotExists($expression['value']);
+                return new KeyNotExists($expression['value']);
 
             case 'null':
-                return new Constraint\Same(null);
+                return new Same(null);
 
             case 'notNull':
-                return new Constraint\NotSame(null);
+                return new NotSame(null);
 
             case 'isEmpty':
-                return new Constraint\IsEmpty();
+                return new IsEmpty();
 
             case 'greaterThan':
-                return new Constraint\GreaterThan($expression['value']);
+                return new GreaterThan($expression['value']);
 
             case 'greaterThanEqual':
-                return new Constraint\GreaterThanEqual($expression['value']);
+                return new GreaterThanEqual($expression['value']);
 
             case 'lessThan':
-                return new Constraint\LessThan($expression['value']);
+                return new LessThan($expression['value']);
 
             case 'lessThanEqual':
-                return new Constraint\LessThanEqual($expression['value']);
+                return new LessThanEqual($expression['value']);
         }
 
         throw UnsupportedSerializedExpressionException::unsupportedConstraint($expression);

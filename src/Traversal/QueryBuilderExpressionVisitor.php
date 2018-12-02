@@ -20,10 +20,36 @@ use Phlexible\Component\Expression\Exception\UnhandledExpressionException;
 use Phlexible\Component\Expression\Exception\UnsupportedExpressionException;
 use Phlexible\Component\Expression\Selector\PropertyPath;
 use SplStack;
-use Webmozart\Expression\Constraint;
+use Webmozart\Expression\Constraint\Contains;
+use Webmozart\Expression\Constraint\EndsWith;
+use Webmozart\Expression\Constraint\Equals;
+use Webmozart\Expression\Constraint\GreaterThan;
+use Webmozart\Expression\Constraint\GreaterThanEqual;
+use Webmozart\Expression\Constraint\In;
+use Webmozart\Expression\Constraint\IsEmpty;
+use Webmozart\Expression\Constraint\IsInstanceOf;
+use Webmozart\Expression\Constraint\KeyExists;
+use Webmozart\Expression\Constraint\KeyNotExists;
+use Webmozart\Expression\Constraint\LessThan;
+use Webmozart\Expression\Constraint\LessThanEqual;
+use Webmozart\Expression\Constraint\Matches;
+use Webmozart\Expression\Constraint\NotEquals;
+use Webmozart\Expression\Constraint\NotSame;
+use Webmozart\Expression\Constraint\Same;
+use Webmozart\Expression\Constraint\StartsWith;
 use Webmozart\Expression\Expression;
-use Webmozart\Expression\Logic;
-use Webmozart\Expression\Selector;
+use Webmozart\Expression\Logic\AlwaysFalse;
+use Webmozart\Expression\Logic\AlwaysTrue;
+use Webmozart\Expression\Logic\AndX;
+use Webmozart\Expression\Logic\Not;
+use Webmozart\Expression\Logic\OrX;
+use Webmozart\Expression\Selector\All;
+use Webmozart\Expression\Selector\AtLeast;
+use Webmozart\Expression\Selector\AtMost;
+use Webmozart\Expression\Selector\Exactly;
+use Webmozart\Expression\Selector\Key;
+use Webmozart\Expression\Selector\Method;
+use Webmozart\Expression\Selector\Property;
 use Webmozart\Expression\Traversal\ExpressionTraverser;
 use Webmozart\Expression\Traversal\ExpressionVisitor;
 
@@ -69,18 +95,18 @@ class QueryBuilderExpressionVisitor implements ExpressionVisitor
 
     public function enterExpression(Expression $expr): Expression
     {
-        if ($expr instanceof Logic\AndX) {
+        if ($expr instanceof AndX) {
             $this->currentStack->push(new SplStack());
-        } elseif ($expr instanceof Logic\OrX) {
+        } elseif ($expr instanceof OrX) {
             $this->currentStack->push(new SplStack());
-        } elseif ($expr instanceof Logic\Not) {
+        } elseif ($expr instanceof Not) {
             $this->currentStack->push(new SplStack());
-        } elseif ($expr instanceof Selector\Key) {
+        } elseif ($expr instanceof Key) {
             if ($this->currentField) {
                 throw UnsupportedExpressionException::unsupportedSubKeys();
             }
             $this->currentField = $expr->getKey();
-        } elseif ($expr instanceof Selector\Property) {
+        } elseif ($expr instanceof Property) {
             if ($this->currentField) {
                 throw UnsupportedExpressionException::unsupportedSubProperties();
             }
@@ -90,11 +116,11 @@ class QueryBuilderExpressionVisitor implements ExpressionVisitor
                 throw UnsupportedExpressionException::unsupportedSubProperties();
             }
             $this->currentField = $expr->getPropertyPath();
-        } elseif ($expr instanceof Selector\Method ||
-            $expr instanceof Selector\All ||
-            $expr instanceof Selector\AtLeast ||
-            $expr instanceof Selector\AtMost ||
-            $expr instanceof Selector\Exactly
+        } elseif ($expr instanceof Method ||
+            $expr instanceof All ||
+            $expr instanceof AtLeast ||
+            $expr instanceof AtMost ||
+            $expr instanceof Exactly
         ) {
             throw UnsupportedExpressionException::unsupportedSelector($expr);
         }
@@ -104,25 +130,25 @@ class QueryBuilderExpressionVisitor implements ExpressionVisitor
 
     public function leaveExpression(Expression $expr): Expression
     {
-        if ($expr instanceof Logic\AndX) {
+        if ($expr instanceof AndX) {
             $conjunctionStack = $this->currentStack->pop();
             $current = $this->qb->expr()->andX();
             while ($conjunctionStack->count()) {
                 $current->add($conjunctionStack->pop());
             }
             $this->currentStack->top()->push($current);
-        } elseif ($expr instanceof Logic\OrX) {
+        } elseif ($expr instanceof OrX) {
             $disjunctionStack = $this->currentStack->pop();
             $current = $this->qb->expr()->orX();
             while ($disjunctionStack->count()) {
                 $current->add($disjunctionStack->pop());
             }
             $this->currentStack->top()->push($current);
-        } elseif ($expr instanceof Logic\Not) {
+        } elseif ($expr instanceof Not) {
             $negatedStack = $this->currentStack->pop();
             $current = $this->qb->expr()->not($negatedStack->pop());
             $this->currentStack->top()->push($current);
-        } elseif ($expr instanceof Selector\Key) {
+        } elseif ($expr instanceof Key) {
             $this->currentField = null;
         } else {
             $this->currentStack->top()->push($this->walkConstraint($expr));
@@ -133,10 +159,10 @@ class QueryBuilderExpressionVisitor implements ExpressionVisitor
 
     public function walkConstraint(Expression $expr): Comparison
     {
-        if ($expr instanceof Logic\AlwaysTrue) {
+        if ($expr instanceof AlwaysTrue) {
             return $this->qb->expr()->eq(1, 1);
         }
-        if ($expr instanceof Logic\AlwaysFalse) {
+        if ($expr instanceof AlwaysFalse) {
             return $this->qb->expr()->eq(1, 0);
         }
 
@@ -145,56 +171,63 @@ class QueryBuilderExpressionVisitor implements ExpressionVisitor
         }
 
         $field = $this->alias.'.'.$this->currentField;
+        if (strpos($this->currentField, '.') !== false) {
+            [$join, $field] = explode('.', $this->currentField);
+            $alias = $join;
+            $join = $this->alias.'.'.$join;
+            $this->qb->join($join, $alias);
+            $field = $alias.'.'.$field;
+        }
 
-        if ($expr instanceof Constraint\Contains) {
+        if ($expr instanceof Contains) {
             return $this->qb->expr()->like($field, $this->literal("%{$expr->getComparedValue()}%"));
         }
-        if ($expr instanceof Constraint\EndsWith) {
+        if ($expr instanceof EndsWith) {
             return $this->qb->expr()->eq($field, $this->literal("%{$expr->getAcceptedSuffix()}"));
         }
-        if ($expr instanceof Constraint\Equals) {
+        if ($expr instanceof Equals) {
             return $this->qb->expr()->eq($field, $this->literal($expr->getComparedValue()));
         }
-        if ($expr instanceof Constraint\GreaterThan) {
+        if ($expr instanceof GreaterThan) {
             return $this->qb->expr()->gt($field, $this->literal($expr->getComparedValue()));
         }
-        if ($expr instanceof Constraint\GreaterThanEqual) {
+        if ($expr instanceof GreaterThanEqual) {
             return $this->qb->expr()->gte($field, $this->literal($expr->getComparedValue()));
         }
-        if ($expr instanceof Constraint\In) {
+        if ($expr instanceof In) {
             return $this->qb->expr()->in($field, $this->literal($expr->getAcceptedValues()));
         }
-        if ($expr instanceof Constraint\IsEmpty) {
+        if ($expr instanceof IsEmpty) {
             throw UnsupportedExpressionException::unsupportedConstraint($expr);
         }
-        if ($expr instanceof Constraint\IsInstanceOf) {
+        if ($expr instanceof IsInstanceOf) {
             throw UnsupportedExpressionException::unsupportedConstraint($expr);
         }
-        if ($expr instanceof Constraint\KeyExists) {
+        if ($expr instanceof KeyExists) {
             throw UnsupportedExpressionException::unsupportedConstraint($expr);
         }
-        if ($expr instanceof Constraint\KeyNotExists) {
+        if ($expr instanceof KeyNotExists) {
             throw UnsupportedExpressionException::unsupportedConstraint($expr);
         }
-        if ($expr instanceof Constraint\LessThan) {
+        if ($expr instanceof LessThan) {
             return $this->qb->expr()->lt($field, $this->literal($expr->getComparedValue()));
         }
-        if ($expr instanceof Constraint\LessThanEqual) {
+        if ($expr instanceof LessThanEqual) {
             return $this->qb->expr()->lte($field, $this->literal($expr->getComparedValue()));
         }
-        if ($expr instanceof Constraint\Matches) {
+        if ($expr instanceof Matches) {
             throw UnsupportedExpressionException::unsupportedConstraint($expr);
         }
-        if ($expr instanceof Constraint\NotEquals) {
+        if ($expr instanceof NotEquals) {
             return $this->qb->expr()->neq($field, $this->literal($expr->getComparedValue()));
         }
-        if ($expr instanceof Constraint\NotSame) {
+        if ($expr instanceof NotSame) {
             return $this->qb->expr()->neq($field, $this->literal($expr->getComparedValue()));
         }
-        if ($expr instanceof Constraint\Same) {
+        if ($expr instanceof Same) {
             return $this->qb->expr()->eq($field, $this->literal($expr->getComparedValue()));
         }
-        if ($expr instanceof Constraint\StartsWith) {
+        if ($expr instanceof StartsWith) {
             return $this->qb->expr()->like($field, $this->literal("{$expr->getAcceptedPrefix()}%"));
         }
 
@@ -206,7 +239,7 @@ class QueryBuilderExpressionVisitor implements ExpressionVisitor
      */
     private function literal($value): Literal
     {
-        if (is_array($value)) {
+        if (\is_array($value)) {
             foreach ($value as $index => $v) {
                 $value[$index] = $this->qb->expr()->literal($v);
             }
