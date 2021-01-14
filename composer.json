@@ -15,16 +15,16 @@
         }
     },
     "require": {
-        "php": "^7.1",
+        "php": "^7.4|^8.0",
         "webmozart/expression": "^1.0"
     },
     "require-dev": {
         "doctrine/annotations": "^1.5",
         "doctrine/cache": "^1.7",
         "doctrine/orm": "^2.5",
-        "phpunit/phpunit": "^7.0",
-        "symfony/form": "^3.2|^4.0",
-        "symfony/property-access": "^3.2|^4.0"
+        "phpunit/phpunit": "^9.0",
+        "symfony/form": "^3.2|^4.0|^5.0",
+        "symfony/property-access": "^3.2|^4.0|^5.0"
     },
     "extra": {
         "branch-alias": {
